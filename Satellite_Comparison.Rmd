@@ -1,0 +1,186 @@
+---
+title: "Satellite_Comparison"
+author: "Britta Themann"
+date: "05.05.2022"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+## install packages
+```{r}
+# install.packages("ggplot2")
+library(ggplot2)
+```
+
+## create satellite dataframe
+```{r}
+# load csv file
+data <- read.csv("Satellite_Comparison_Source.csv")
+
+# define column names
+colnames <- c("Satellite","Satellite Count","Instrument",
+              "Band","Bandname","Band Purpose",
+              "Wavelength [nm]","Bandwidth [nm]","Min Wavelength [nm]","Max Wavelength [nm]",
+              "Spatial Resolution [cm].","Radiometric Resolution [bits].","Min Temporal Resolution [days]","Max Temporal Resolution [days]","X Image Extent [km]","Y Image Extent [km]")
+
+# rename columns
+colnames(data) <- colnames
+
+# FOR BETTER VIEW subset to wavelengths up to 2500 nm
+# data1 <- data[data$`Wavelength [nm]` < '2500', ] # subsets incorrectly for NAOS
+```
+
+## add colors per wavelength
+```{r}
+cp <- c("magenta", "blue", "darkgreen", "darkgoldenrod","red","darkred")
+b <- c(400,480,540,580,700,900)
+
+for (row in 1:nrow(data)){
+  if (data$`Wavelength [nm]`[row] > b[1] && data$`Wavelength [nm]`[row] < b[2]){
+    data$Color[row] <- cp[1]
+  }else if (data$`Wavelength [nm]`[row] > b[2] && data$`Wavelength [nm]`[row] < b[3]){
+    data$Color[row] <- cp[2]
+  }else if (data$`Wavelength [nm]`[row] > b[3] && data$`Wavelength [nm]`[row] < b[4]){
+    data$Color[row] <- cp[3]
+  }else if (data$`Wavelength [nm]`[row] > b[4] && data$`Wavelength [nm]`[row] < b[5]){
+    data$Color[row] <- cp[4]
+  }else if (data$`Wavelength [nm]`[row] > b[5] && data$`Wavelength [nm]`[row] < b[6]){
+    data$Color[row] <- cp[5]
+  }else {
+    data$Color[row] <- cp[6]}
+}
+
+```
+
+
+## create Band Comparison Plot
+```{r}
+# define breaks for color palette
+b <- c(400,480,540,580,700,900)
+cp <- c("magenta", "blue", "darkgreen", "darkgoldenrod","red","darkred")
+wl.lim <- c(400,900)
+
+
+# plot
+ggplot(data, aes(Satellite, `Wavelength [nm]`, color = Band))+ # color = `Wavelength [nm]` makes dodge disfunctional
+
+  # band visualization
+  geom_errorbar(aes(ymin = `Min Wavelength [nm]`, ymax = `Max Wavelength [nm]`),
+                position = position_dodge(0.5), size = 10, width = 0)+
+  # labels
+  geom_label(label=data$Band,nudge_x = 0.15, nudge_y = 0, check_overlap = T,  size=3,  alpha=0.5)+ #nudge_x = 0.15, nudge_y = 0
+
+  # color palette
+  # scale_color_gradientn(limits = wl.lim, colors=cp, breaks=b, labels=format(b))+
+
+  # limiting the domain to UV-NIR
+  ylim(wl.lim)+
+
+  # flip x and y-axis
+  coord_flip()+
+
+  # title, axes and theme
+  labs(title="Band Comparison of Optical EO Satellites")+
+  theme_classic()+
+  theme(plot.title = element_text(face="bold", size=14, hjust = 0.5),
+        axis.title.x = element_text(face="bold", size=12),
+        axis.title.y = element_text(face="bold", size=12),
+        legend.title = element_text(face = "bold"),
+        legend.position="none")
+
+
+# issue with dodge due to color=`Wavelength [nm]`
+# WORKAROUND: add colors in table, so they are discrete and the scale_color_gradient can be deleted
+
+# adjust colors to breaks: colors are off break centers
+```
+
+## TEST
+```{r}
+# dat <- data.frame(x=1:2, y=1:6, g=LETTERS[1:3], e=.5)
+# pos <- position_dodge(.2)
+# lim <- aes(ymin=y-e, ymax=y+e)
+# 
+# ggplot(dat, aes(x=x, y=y, colour=g)) +
+#   geom_errorbar(lim, position=pos, width=.1)
+
+# install.packages("reshape2")
+library(reshape2)
+x <- c(19, 18, 21, 19)
+y <- c(17, 16, 18, 19)
+z <- c("a", "b", "c", "d")
+
+df <- melt (data.frame (x,y,z))
+
+# ggplot(df, aes(x=z, y=value, color=variable)) + 
+#   geom_errorbar(aes(ymin=value-5 , ymax=value ), position = position_dodge(width = 0.5), size = 1.5, width = 0.2)
+
+ggplot(df, aes(x=z, y=value, color=variable)) + 
+  geom_bar(stat="identity", position = position_dodge(width = 0.5), size = 1.5, width = 0.2)
+  
+```
+
+### ARCHIVE
+## dataframe column names
+```{r}
+# colnames<-c("Satellite","Band","Bandname","Wavelength [nm]","Min Wavelength [nm]","Max Wavelength [nm]","Spatial Resolution [cm]","Radiometric Resolution [bits]","Min Temporal Resolution [days]","Max Temporal Resolution [days]","X Image Extent [km]","Y Image Extent [km]")
+```
+
+## create NAOS dataframe
+```{r}
+# df.naos <- data.frame("Satellite"=c("NAOS"),
+#                  "Band"=c(1:5),
+#                  "Bandname"=c("Pan","Blue","Green","Red","NIR"),
+#                  "Wavelength nm"=c(675,480,545,660,835),
+#                  "Min Wavelength nm"=c(450,450,510,630,770),
+#                  "Max Wavelength nm"=c(900,510,580,690,900),
+#                  "Spatial Resolution cm"=c(40,80,80,80,80),
+#                  "Radiometric Resolution bits"=c(12),
+#                  "Min Temporal Resolution days"=c(5),
+#                  "Max Temporal Resolution days"=c(8),
+#                  "X Image Extent km"=c(12),
+#                  "Y Image Extent km"=c(12))
+# 
+# colnames(df.naos)<-colnames
+```
+
+## create Sentinel-2 dataframe
+```{r}
+# df.s2 <- data.frame("Satellite"=c("Sentinel-2"),
+#                  "Band"=c(1:13),
+#                  "Bandname"=c("Coastal aerosol","Blue","Green","Red","Vegetation Red Edge 1","Vegetation Red Edge 2","Vegetation Red Edge 3","NIR","Vegetation Red Edge 4","Water Vapor", "SWIR - Cirrus","SWIR 1","SWIR 2"),
+#                  "Wavelength nm"=    c(442.4,492.2,559.4,664.7,704,740,784.3,832.8,864.3,944,1375.2,1612,2193.7),
+#                  "Min Wavelength nm"=c(432.4,459.4,541.4,649.7,697.5,732.5,774.3,779.8,854.3,934,1360.2,1566,2103.7),
+#                  "Max Wavelength nm"=c(452.5,525.4,577.4,680.7,712.5,747.5,794.3,885.8,874.3,954,1390.3,1658,2283.7),
+#                  "Spatial Resolution cm"=c(60,10,10,10,20,20,20,10,20,60,60,20,20),
+#                  "Radiometric Resolution bits"=c(12),
+#                  "Min Temporal Resolution days"=c(5),
+#                  "Max Temporal Resolution days"=c(5),
+#                  "X Image Extent km"=c(100),
+#                  "Y Image Extent km"=c(100))
+# 
+# colnames(df.s2)<-colnames
+```
+
+## merge dataframes
+```{r}
+data <- rbind(df.naos,df.s2)
+```
+
+## DPC message
+```{r}
+The issue is that the errorbars should be dodged with "position = position_dodge()" (line 47). There are dodged so long "color=`Wavelength [nm]`" is not applied in the general (line 43) plot. Once applied, they become un-dodged. I think it is a bug by the package, but maybe somebody can find a workaround. If not, I will do some InkScape vector graphics magic, although that is not an elegant solution 🙁
+```
+
+
+
+## title
+```{r}
+
+```
+
+## title
+```{r}
+
+```
