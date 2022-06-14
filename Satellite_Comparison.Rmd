@@ -199,7 +199,7 @@ ggsave(file=paste0("Band_Comparison.svg"), plot=plot.bc, width=15, height=18)
 ggsave(file=paste0("Band_Comparison_VHR.pdf"), plot=plot.bc.vhr, width=15, height=10)
 ggsave(file=paste0("Band_Comparison_VHR.svg"), plot=plot.bc.vhr, width=15, height=10)
 ggsave(file=paste0("Band_Comparison_MR.pdf"), plot=plot.bc.mr, width=15, height=8)
-ggsave(file=paste0("Band_Comparison_NR.svg"), plot=plot.bc.mr, width=15, height=8)
+ggsave(file=paste0("Band_Comparison_MR.svg"), plot=plot.bc.mr, width=15, height=8)
 ```
 
 ## title
