@@ -11,6 +11,8 @@ editor_options:
 ```{r}
 # install.packages("ggplot2")
 library(ggplot2)
+# install.packages("svglite")
+library(svglite)
 ```
 
 ## create satellite dataframe
@@ -22,7 +24,7 @@ data <- read.csv("Satellite_Comparison_Source.csv")
 colnames(data) <- c("Satellite","Satellite Count","Instrument",
               "Band","Bandname","Band Purpose",
               "Wavelength [nm]","Bandwidth [nm]","Min Wavelength [nm]","Max Wavelength [nm]",
-              "Spatial Resolution [cm].","Radiometric Resolution [bits].","Min Temporal Resolution [days]","Max Temporal Resolution [days]","X Image Extent [km]","Y Image Extent [km]")
+              "Spatial Resolution [cm].","Radiometric Resolution [bits].","Min Temporal Resolution [days]","Max Temporal Resolution [days]","X Image Extent [km]","Y Image Extent [km]","Type")
 ```
 
 ## Wavelength - Domain - Representation
@@ -33,7 +35,7 @@ VIS
 435 - 500: Blue - royalblue
 500 - 520: Cyan - cyan
 520 - 565: Green - forestgreen
-565 - 590: Yellow - darkgoldenrod
+565 - 590: Yellow - darkgoldenrod1
 590 - 625: Orange - orange
 625 - 740: Red - red
 NIR
@@ -53,7 +55,7 @@ for (row in 1:nrow(data.bc)){
   else if (data.bc$`Wavelength [nm]`[row] >= 435 && data.bc$`Wavelength [nm]`[row] < 500){data.bc$Color[row] <- 'royalblue'}
   else if (data.bc$`Wavelength [nm]`[row] >= 500 && data.bc$`Wavelength [nm]`[row] < 520){data.bc$Color[row] <- 'cyan'}
   else if (data.bc$`Wavelength [nm]`[row] >= 520 && data.bc$`Wavelength [nm]`[row] < 565){data.bc$Color[row] <- 'forestgreen'}
-  else if (data.bc$`Wavelength [nm]`[row] >= 565 && data.bc$`Wavelength [nm]`[row] < 590){data.bc$Color[row] <- 'darkgoldenrod'}
+  else if (data.bc$`Wavelength [nm]`[row] >= 565 && data.bc$`Wavelength [nm]`[row] < 590){data.bc$Color[row] <- 'darkgoldenrod1'}
   else if (data.bc$`Wavelength [nm]`[row] >= 590 && data.bc$`Wavelength [nm]`[row] < 625){data.bc$Color[row] <- 'orange'}
   else if (data.bc$`Wavelength [nm]`[row] >= 625 && data.bc$`Wavelength [nm]`[row] < 740){data.bc$Color[row] <- 'red'}
   else {data.bc$Color[row] <- 'red3'}
@@ -66,11 +68,21 @@ for (row in 1:nrow(data.bc)){
  
 # overwrite color for Pan channels
 data.bc$Color[data.bc$Bandname == 'Pan'] <- 'grey'
+
+# fix Satellite order
+data.bc$Satellite <- as.factor(data.bc$Satellite)
+data.bc$Satellite <- factor(data.bc$Satellite, levels=c('NAOS','Pléiades Neo','WorldView-3','GeoEye-1','PlanetScope',
+                                                        'Sentinel-2','Landsat-9','Sentinel-3'))
+
+# subset VHR data
+data.bc.vhr <- subset(data.bc, Type %in% 'VHR')
+
+# subset MR data + NAOS
+data.bc.mr <- rbind(subset(data.bc, Type %in% 'MR'),subset(data.bc, Satellite %in% 'NAOS'))
 ```
 
-## create Band Comparison Plot
+## create Band Comparison Plot (VHR+MR)
 ```{r}
-
 # plot
 plot.bc <- ggplot(data.bc, aes(Satellite, `Wavelength [nm]`))+
   
@@ -79,7 +91,6 @@ plot.bc <- ggplot(data.bc, aes(Satellite, `Wavelength [nm]`))+
                 position = position_dodge(1), size = 8, width = 0)+
   
   # labels
-
   geom_text(aes(label=Band, group= Band),  size=2,  alpha=0.8, color="black", fontface="bold", 
             position = position_dodge(1), check_overlap = F)+
  
@@ -88,6 +99,9 @@ plot.bc <- ggplot(data.bc, aes(Satellite, `Wavelength [nm]`))+
   
   # adjust wavelength axis
   scale_y_continuous(breaks = seq(300, 1000, by = 100))+
+  
+  
+  geom_vline(xintercept=seq(1.5, length(unique(data.bc$Satellite))-0.5, 1), lwd=0.2, colour="black", linetype='dashed')+
 
   # flip x and y-axis
   coord_flip()+
@@ -104,9 +118,88 @@ plot.bc <- ggplot(data.bc, aes(Satellite, `Wavelength [nm]`))+
 plot.bc
 ```
 
-## print Band Comparison plot
+## create VHR Band Comparison Plot 
 ```{r}
-ggsave(file=paste0("Band_Comparison.pdf"), plot=plot.bc, width=15, height=5)
+# plot
+plot.bc.vhr <- ggplot(data.bc.vhr, aes(Satellite, `Wavelength [nm]`))+
+  
+  # band visualization
+  geom_errorbar(aes(ymin = `Min Wavelength [nm]`, ymax = `Max Wavelength [nm]`, group = Band, color=Color),
+                position = position_dodge(1), size = 8, width = 0)+
+  
+  # labels
+  geom_text(aes(label=Band, group= Band),  size=2,  alpha=0.8, color="black", fontface="bold", 
+            position = position_dodge(1), check_overlap = F)+
+ 
+  # color palette
+  scale_color_identity()+
+  
+  # adjust wavelength axis
+  scale_y_continuous(breaks = seq(300, 1000, by = 100))+
+  
+  
+  geom_vline(xintercept=seq(1.5, length(unique(data.bc$Satellite))-0.5, 1), lwd=0.2, colour="black", linetype='dashed')+
+
+  # flip x and y-axis
+  coord_flip()+
+
+  # title, axes and theme
+  labs(title="Band Comparison of VHR Optical EO Satellites")+
+  theme_classic()+
+  theme(plot.title = element_text(face="bold", size=14, hjust = 0.5),
+        axis.title.x = element_text(face="bold", size=12),
+        axis.title.y = element_text(face="bold", size=12),
+        legend.title = element_text(face = "bold"),
+        legend.position="none")
+
+plot.bc.vhr
+```
+
+## create MR Band Comparison Plot 
+```{r}
+# plot
+plot.bc.mr <- ggplot(data.bc.mr, aes(Satellite, `Wavelength [nm]`))+
+  
+  # band visualization
+  geom_errorbar(aes(ymin = `Min Wavelength [nm]`, ymax = `Max Wavelength [nm]`, group = Band, color=Color),
+                position = position_dodge(1), size = 8, width = 0)+
+  
+  # labels
+  geom_text(aes(label=Band, group= Band),  size=2,  alpha=0.8, color="black", fontface="bold", 
+            position = position_dodge(1), check_overlap = F)+
+ 
+  # color palette
+  scale_color_identity()+
+  
+  # adjust wavelength axis
+  scale_y_continuous(breaks = seq(300, 1000, by = 100))+
+  
+  
+  geom_vline(xintercept=seq(1.5, length(unique(data.bc$Satellite))-0.5, 1), lwd=0.2, colour="black", linetype='dashed')+
+
+  # flip x and y-axis
+  coord_flip()+
+
+  # title, axes and theme
+  labs(title="Band Comparison of MR Optical EO Satellites")+
+  theme_classic()+
+  theme(plot.title = element_text(face="bold", size=14, hjust = 0.5),
+        axis.title.x = element_text(face="bold", size=12),
+        axis.title.y = element_text(face="bold", size=12),
+        legend.title = element_text(face = "bold"),
+        legend.position="none")
+
+plot.bc.mr
+```
+
+## print Band Comparison plots
+```{r}
+ggsave(file=paste0("Band_Comparison.pdf"), plot=plot.bc, width=15, height=18)
+ggsave(file=paste0("Band_Comparison.svg"), plot=plot.bc, width=15, height=18)
+ggsave(file=paste0("Band_Comparison_VHR.pdf"), plot=plot.bc.vhr, width=15, height=10)
+ggsave(file=paste0("Band_Comparison_VHR.svg"), plot=plot.bc.vhr, width=15, height=10)
+ggsave(file=paste0("Band_Comparison_MR.pdf"), plot=plot.bc.mr, width=15, height=8)
+ggsave(file=paste0("Band_Comparison_NR.svg"), plot=plot.bc.mr, width=15, height=8)
 ```
 
 ## title
